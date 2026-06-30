@@ -37,6 +37,7 @@ class Auto_JSONLD_Meta_Box {
             'webpage'       => [ 'label' => 'WebPage',       'icon' => 'globe' ],
             'article'       => [ 'label' => 'Article',        'icon' => 'edit' ],
             'blogposting'   => [ 'label' => 'BlogPosting',    'icon' => 'admin-post' ],
+            'creativework'  => [ 'label' => 'Portfolio / Case Study', 'icon' => 'portfolio' ],
             'faq'           => [ 'label' => 'FAQPage',        'icon' => 'editor-help' ],
             'service'       => [ 'label' => 'Service',        'icon' => 'admin-tools' ],
             'localbusiness' => [ 'label' => 'LocalBusiness',  'icon' => 'building' ],
@@ -68,6 +69,13 @@ class Auto_JSONLD_Meta_Box {
                     <tr>
                         <th><label for="ajld_seo_desc">Meta Description</label></th>
                         <td><textarea id="ajld_seo_desc" name="auto_jsonld[seo_description]" rows="3" class="widefat" placeholder="Leave blank to skip"><?php echo esc_textarea( $meta['seo_description'] ?? '' ); ?></textarea></td>
+                    </tr>
+                    <tr>
+                        <th><label for="ajld_focus_keyword">Focus Keyword</label></th>
+                        <td>
+                            <input type="text" id="ajld_focus_keyword" name="auto_jsonld[focus_keyword]" value="<?php echo esc_attr( $meta['focus_keyword'] ?? '' ); ?>" placeholder="e.g. fintech platform development" class="widefat">
+                            <p class="ajld-hint">The one keyword this page targets. Added to schema as <code>about</code> + <code>keywords</code> so Google knows the page topic.</p>
+                        </td>
                     </tr>
                     <tr>
                         <th><label for="ajld_seo_image">OG Image URL</label></th>
@@ -110,6 +118,23 @@ class Auto_JSONLD_Meta_Box {
                     </table>
                 </div>
 
+                <div class="ajld-schema-fields" id="ajld-fields-service-extra" style="<?php echo in_array('service', $enabled_schemas) ? '' : 'display:none'; ?>">
+                    <h4>Service Type (for "Hire X Developer" pages)</h4>
+                    <table class="ajld-table">
+                        <tr><th>Service Type</th><td><input type="text" name="auto_jsonld[service_type]" value="<?php echo esc_attr($meta['service_type'] ?? ''); ?>" class="widefat" placeholder="e.g. React Developer, Mobile App Development"></td></tr>
+                    </table>
+                </div>
+
+                <div class="ajld-schema-fields" id="ajld-fields-creativework" style="<?php echo in_array('creativework', $enabled_schemas) ? '' : 'display:none'; ?>">
+                    <h4>Portfolio / Case Study Details</h4>
+                    <table class="ajld-table">
+                        <tr><th>Client / Project Name</th><td><input type="text" name="auto_jsonld[project_client]" value="<?php echo esc_attr($meta['project_client'] ?? ''); ?>" class="widefat" placeholder="e.g. Ocean Money"></td></tr>
+                        <tr><th>Tech Stack (comma separated)</th><td><input type="text" name="auto_jsonld[project_tech]" value="<?php echo esc_attr($meta['project_tech'] ?? ''); ?>" class="widefat" placeholder="React, Flutter, Node.js, Web3"></td></tr>
+                        <tr><th>Start Date</th><td><input type="text" name="auto_jsonld[project_start]" value="<?php echo esc_attr($meta['project_start'] ?? ''); ?>" class="widefat" placeholder="YYYY-MM-DD (optional)"></td></tr>
+                        <tr><th>End / Launch Date</th><td><input type="text" name="auto_jsonld[project_end]" value="<?php echo esc_attr($meta['project_end'] ?? ''); ?>" class="widefat" placeholder="YYYY-MM-DD (optional)"></td></tr>
+                    </table>
+                </div>
+
                 <div class="ajld-schema-fields" id="ajld-fields-itemlist" style="<?php echo in_array('itemlist', $enabled_schemas) ? '' : 'display:none'; ?>">
                     <h4>ItemList Details</h4>
                     <table class="ajld-table">
@@ -143,7 +168,7 @@ class Auto_JSONLD_Meta_Box {
         if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 
         $data        = [];
-        $text_fields = [ 'seo_title', 'seo_description', 'seo_image', 'canonical', 'custom_schema', 'service_name', 'service_description', 'service_area', 'service_price', 'itemlist_name', 'itemlist_urls' ];
+        $text_fields = [ 'seo_title', 'seo_description', 'seo_image', 'canonical', 'focus_keyword', 'custom_schema', 'service_name', 'service_type', 'service_description', 'service_area', 'service_price', 'project_client', 'project_tech', 'project_start', 'project_end', 'itemlist_name', 'itemlist_urls' ];
         $raw         = $_POST['auto_jsonld'] ?? [];
 
         foreach ( $text_fields as $field ) {

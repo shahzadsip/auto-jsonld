@@ -112,7 +112,20 @@ class Auto_JSONLD_Schema_Types {
         ];
         if ( ! empty( $this->meta['seo_description'] ) ) $schema['description'] = $this->meta['seo_description'];
         if ( $image ) $schema['image'] = Auto_JSONLD_Content_Parser::get_image_object( $image );
+        $this->apply_focus_keyword( $schema );
         return $schema;
+    }
+
+    /**
+     * Inject the focus keyword as an `about` entity and `keywords` string.
+     * This is the single biggest SEO win for case-study / portfolio pages:
+     * it tells Google the exact topic the page is built around.
+     */
+    private function apply_focus_keyword( &$schema ) {
+        $keyword = ! empty( $this->meta['focus_keyword'] ) ? trim( $this->meta['focus_keyword'] ) : '';
+        if ( ! $keyword ) return;
+        $schema['about']    = [ '@type' => 'Thing', 'name' => $keyword ];
+        $schema['keywords'] = $keyword;
     }
 
     public function faq( $items ) {
@@ -137,9 +150,57 @@ class Auto_JSONLD_Schema_Types {
             'provider' => [ '@id' => $this->site_url . '#organization' ],
             'url'      => $this->page_url,
         ];
+        if ( ! empty( $this->meta['service_type'] ) )        $schema['serviceType'] = $this->meta['service_type'];
         if ( ! empty( $this->meta['service_description'] ) ) $schema['description'] = $this->meta['service_description'];
         if ( ! empty( $this->meta['service_area'] ) )        $schema['areaServed']  = $this->meta['service_area'];
         if ( ! empty( $this->meta['service_price'] ) )       $schema['offers']      = [ '@type' => 'Offer', 'price' => $this->meta['service_price'] ];
+        $this->apply_focus_keyword( $schema );
+        return $schema;
+    }
+
+    /**
+     * CreativeWork: rich modeling for portfolio / case-study pages.
+     * More descriptive than Article for showcasing real client projects:
+     * captures the project, who it was built for, the tech used, and timeline.
+     */
+    public function creative_work() {
+        $author_data = $this->post ? get_userdata( $this->post->post_author ) : null;
+        $name        = ! empty( $this->meta['seo_title'] ) ? $this->meta['seo_title'] : get_the_title( $this->post->ID );
+        $image       = $this->get_image();
+        $author_name = Auto_JSONLD_Settings::get( 'author_name' ) ?: ( $author_data ? $author_data->display_name : '' );
+        $author_url  = Auto_JSONLD_Settings::get( 'author_url' ) ?: get_author_posts_url( $this->post->post_author );
+
+        $schema = [
+            '@type'         => 'CreativeWork',
+            '@id'           => $this->page_url . '#project',
+            'name'          => $name,
+            'url'           => $this->page_url,
+            'inLanguage'    => $this->lang,
+            'datePublished' => get_the_date( 'c', $this->post->ID ),
+            'dateModified'  => get_the_modified_date( 'c', $this->post->ID ),
+            'creator'       => [ '@type' => 'Person', '@id' => $author_url . '#author', 'name' => $author_name, 'url' => $author_url ],
+            'publisher'     => [ '@id' => $this->site_url . '#organization' ],
+            'isPartOf'      => [ '@id' => $this->page_url . '#webpage' ],
+        ];
+
+        $description = ! empty( $this->meta['seo_description'] ) ? $this->meta['seo_description'] : '';
+        if ( $description ) $schema['description'] = $description;
+        if ( $image )      $schema['image']       = Auto_JSONLD_Content_Parser::get_image_object( $image );
+
+        // Tech stack feeds keywords (comma separated pills on the page).
+        if ( ! empty( $this->meta['project_tech'] ) ) {
+            $schema['keywords'] = $this->meta['project_tech'];
+        }
+        // Who the project was built for.
+        if ( ! empty( $this->meta['project_client'] ) ) {
+            $schema['about'] = [ '@type' => 'Organization', 'name' => $this->meta['project_client'] ];
+        }
+        // Optional explicit project timeline (overrides post dates if given).
+        if ( ! empty( $this->meta['project_start'] ) ) $schema['datePublished'] = $this->meta['project_start'];
+        if ( ! empty( $this->meta['project_end'] ) )   $schema['dateModified']  = $this->meta['project_end'];
+
+        // Focus keyword still applies (sets/overrides `about` topic + keywords).
+        $this->apply_focus_keyword( $schema );
         return $schema;
     }
 
@@ -166,9 +227,38 @@ class Auto_JSONLD_Schema_Types {
 
     public function breadcrumb() {
         $items = [ [ '@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => $this->site_url ] ];
+        $pos   = 2;
+
         if ( $this->post && ! is_front_page() ) {
-            $items[] = [ '@type' => 'ListItem', 'position' => 2, 'name' => get_the_title( $this->post->ID ), 'item' => $this->page_url ];
+            // Build ancestor trail so it renders as Home / Case Studies / Ocean Money
+            // instead of a flat two-level crumb. Pages walk their parent chain;
+            // posts use their primary category.
+            $trail = [];
+
+            if ( is_page() || $this->post->post_type === 'page' ) {
+                $ancestors = array_reverse( get_post_ancestors( $this->post->ID ) );
+                foreach ( $ancestors as $ancestor_id ) {
+                    $trail[] = [ 'name' => get_the_title( $ancestor_id ), 'item' => get_permalink( $ancestor_id ) ];
+                }
+            } else {
+                $cats = get_the_category( $this->post->ID );
+                if ( ! empty( $cats ) ) {
+                    $cat     = $cats[0];
+                    $cat_url = get_category_link( $cat->term_id );
+                    if ( $cat_url ) {
+                        $trail[] = [ 'name' => $cat->name, 'item' => $cat_url ];
+                    }
+                }
+            }
+
+            foreach ( $trail as $crumb ) {
+                $items[] = [ '@type' => 'ListItem', 'position' => $pos++, 'name' => $crumb['name'], 'item' => $crumb['item'] ];
+            }
+
+            // Current page is the last crumb (no `item` per Google guidance).
+            $items[] = [ '@type' => 'ListItem', 'position' => $pos, 'name' => get_the_title( $this->post->ID ) ];
         }
+
         return [ '@type' => 'BreadcrumbList', '@id' => $this->page_url . '#breadcrumb', 'itemListElement' => $items ];
     }
 

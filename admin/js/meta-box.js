@@ -10,14 +10,35 @@
         $('#ajld-tab-' + tab).addClass('active');
     });
 
+    // Primary page-type schemas are mutually exclusive: a single URL can only be
+    // one primary type. Checking one auto-unchecks the others so Google never
+    // receives conflicting primary entities for the same page.
+    // Non-primary schemas (website, organization, breadcrumb, service, faq,
+    // localbusiness, itemlist) are allowed to stack freely.
+    var AJLD_PRIMARY_TYPES = ['webpage', 'article', 'blogposting', 'creativework', 'aboutpage', 'contactpage'];
+
     // Schema card toggle
     $(document).on('change', '.ajld-schema-card input[type="checkbox"]', function () {
-        var card   = $(this).closest('.ajld-schema-card');
-        var key    = $(this).val();
-        var fields = $('#ajld-fields-' + key);
-        if ($(this).is(':checked')) {
+        var $input = $(this);
+        var card   = $input.closest('.ajld-schema-card');
+        var key    = $input.val();
+        // Match the primary block (#ajld-fields-service) and any extra blocks
+        // (#ajld-fields-service-extra) so all related fields show/hide together.
+        var fields = $('[id^="ajld-fields-' + key + '"]');
+
+        if ($input.is(':checked')) {
             card.addClass('active');
             if (fields.length) fields.slideDown(200);
+
+            // Enforce mutual exclusion among primary page types.
+            if ($.inArray(key, AJLD_PRIMARY_TYPES) !== -1) {
+                $('.ajld-schema-card input[type="checkbox"]').each(function () {
+                    var otherKey = $(this).val();
+                    if (otherKey !== key && $.inArray(otherKey, AJLD_PRIMARY_TYPES) !== -1 && $(this).is(':checked')) {
+                        $(this).prop('checked', false).trigger('change');
+                    }
+                });
+            }
         } else {
             card.removeClass('active');
             if (fields.length) fields.slideUp(200);

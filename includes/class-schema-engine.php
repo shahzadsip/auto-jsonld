@@ -13,7 +13,7 @@ class Auto_JSONLD_Schema_Engine {
         global $post;
         $graph           = [];
         $default_schemas = Auto_JSONLD_Settings::get( 'default_schemas', [ 'website', 'organization', 'breadcrumb' ] );
-        $empty_meta      = [ 'seo_title' => '', 'seo_description' => '', 'seo_image' => '', 'canonical' => '', 'noindex' => 0, 'nofollow' => 0, 'schemas' => [], 'custom_schema' => '', 'service_name' => '', 'service_description' => '', 'service_area' => '', 'service_price' => '', 'itemlist_name' => '', 'itemlist_urls' => '' ];
+        $empty_meta      = [ 'seo_title' => '', 'seo_description' => '', 'seo_image' => '', 'canonical' => '', 'noindex' => 0, 'nofollow' => 0, 'schemas' => [], 'custom_schema' => '', 'focus_keyword' => '', 'service_name' => '', 'service_type' => '', 'service_description' => '', 'service_area' => '', 'service_price' => '', 'project_client' => '', 'project_tech' => '', 'project_start' => '', 'project_end' => '', 'itemlist_name' => '', 'itemlist_urls' => '' ];
 
         // Global schemas - always output
         $global_types = new Auto_JSONLD_Schema_Types( $post, $empty_meta );
@@ -31,6 +31,7 @@ class Auto_JSONLD_Schema_Engine {
                     case 'article':       $graph[] = $types->article( 'Article' ); break;
                     case 'blogposting':   $graph[] = $types->article( 'BlogPosting' ); break;
                     case 'service':       $graph[] = $types->service(); break;
+                    case 'creativework':  $graph[] = $types->creative_work(); break;
                     case 'localbusiness': $graph[] = $types->local_business(); break;
                     case 'aboutpage':     $graph[] = $types->about_page(); break;
                     case 'contactpage':   $graph[] = $types->contact_page(); break;
